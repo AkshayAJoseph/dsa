@@ -1,5 +1,41 @@
 #include <stdio.h>
 
+int rear = -1, front = -1, rq[20];
+
+void enqueue(int item) {
+    if (rear == 19) {
+        return;
+    }
+    if (rear == -1) {
+        front = 0;
+    }
+    rq[++rear] = item;
+}
+
+int dequeue() {
+    if(rear == -1 || front > rear) {
+        return -1;
+    }
+    int value = rq[front++];
+    return value;
+}
+
+int isEmpty() {
+    if(rear == -1 || front > rear) {
+        return 1;
+    }
+    return 0;
+}
+
+
+int isIn (int n) {
+    for (int i = front; i <= rear; i++) {
+        if (n == rq[i])
+            return 1;
+    }
+    return 0;
+}
+
 int main() {
     int n, tq, comp = 0, t = 0;
     float ttat = 0, twt = 0, atat, awt;
@@ -16,7 +52,7 @@ int main() {
     }
 
     printf("Enter the Arrival Times: ");
-    for(int i = 0; i < n; i++   ) {
+    for(int i = 0; i < n; i++) {
         scanf("%d", &AT[i]);
     }
 
@@ -30,37 +66,36 @@ int main() {
     printf("Enter the Time Quantum: ");
     scanf("%d", &tq);
 
-    // Round Robin simulation (no queue)
     while(comp < n) {
-        int all_idle = 1;
-
-        for(int i = 0; i < n; i++) {
+         for(int i = 0; i < n; i++) {
             if(AT[i] <= t && done[i] == 0) {
-                all_idle = 0;
-
-                if(BTT[i] > tq) {
-                    printf("Time %d: P%d runs for %d units\n", t, P[i], tq);
-                    t += tq;
-                    BTT[i] -= tq;
-                } else {
-                    printf("Time %d: P%d runs for %d units (completes)\n", t, P[i], BTT[i]);
-                    t += BTT[i];
-                    CT[i] = t;
-                    TAT[i] = CT[i] - AT[i];
-                    WT[i] = TAT[i] - BT[i];
-                    ttat += TAT[i]; 
-                    twt += WT[i];
-                    BTT[i] = 0;
-                    done[i] = 1;
-                    comp++;
-                }
+                if(!isIn(i)) 
+                    enqueue(i);
             }
         }
 
-        // If no process was eligible, increment time
-        if(all_idle) {
+        if(isEmpty()) {
             t++;
         }
+        else {
+            int idx = dequeue();
+            if (BTT[idx] > tq) {
+                t += tq;
+                BTT[idx] -= tq;
+            }
+            else {
+                t += BTT[idx];
+                BTT[idx] = 0;
+                done[idx] = 1;
+                comp++;
+            }
+        }
+    }
+    for(int i=0;i<n;i++) {
+        TAT[i] = CT[i] - AT[i];
+        WT[i] = TAT[i] - BTT[i];
+        ttat += TAT[i];
+        twt += WT[i];
     }
 
     atat = ttat / n;

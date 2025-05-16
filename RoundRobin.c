@@ -1,66 +1,132 @@
 #include <stdio.h>
-#include <limits.h>
-
-struct process {
-    int id, at, bt, ct, tat, wt, remaining_bt, stat;
-};
 
 int main() {
-    struct process p[20];
-    int n, i, quantum, comp = 0, current_time = 0;
-    float tottat = 0, totwt = 0, avgtat = 0, avgwt = 0;
-
-    printf("Enter Number of Processes : ");
+    int n, time_quantum, t = 0, completed = 0;
+    float total_tat = 0, total_wt = 0, avg_tat, avg_wt;
+    
+    printf("Enter the number of processes: ");
     scanf("%d", &n);
-    printf("Enter Time Quantum: ");
-    scanf("%d", &quantum);
-
-    printf("Enter Process Details : \n");
-    for (i = 0; i < n; i++) {
-        printf("Enter id | at | bt :\t");
-        scanf("%d%d%d", &p[i].id, &p[i].at, &p[i].bt);
-        p[i].remaining_bt = p[i].bt;
-        p[i].stat = 0; // Process is not completed initially
+    
+    int P[n], AT[n], BT[n], RT[n], CT[n], TAT[n], WT[n], done[n];
+    
+    // Initialize arrays
+    for(int i = 0; i < n; i++) {
+        done[i] = 0;  // Process not completed
     }
-
-    while (comp != n) {
-        int all_completed = 1;
-       
-        for (i = 0; i < n; i++) {
-            if (p[i].at <= current_time && p[i].stat == 0) {
-                all_completed = 0; // At least one process is not completed
-                if (p[i].remaining_bt > quantum) {
-                    current_time += quantum;
-                    p[i].remaining_bt -= quantum;
-                } else {
-                    current_time += p[i].remaining_bt;
-                    p[i].ct = current_time;
-                    p[i].tat = p[i].ct - p[i].at;
-                    p[i].wt = p[i].tat - p[i].bt;
-                    tottat += p[i].tat;
-                    totwt += p[i].wt;
-                    p[i].stat = 1; // Mark process as completed
-                    comp++;
-                    p[i].remaining_bt = 0;
-                }
+    
+    printf("Enter the process IDs:\n");
+    for(int i = 0; i < n; i++) {
+        scanf("%d", &P[i]);
+    }
+    
+    printf("Enter the Arrival Times:\n");
+    for(int i = 0; i < n; i++) {
+        scanf("%d", &AT[i]);
+    }
+    
+    printf("Enter the Burst Times:\n");
+    for(int i = 0; i < n; i++) {
+        scanf("%d", &BT[i]);
+        RT[i] = BT[i];  // Initialize remaining time with burst time
+    }
+    
+    printf("Enter the Time Quantum: ");
+    scanf("%d", &time_quantum);
+    
+    // Sort processes by arrival time
+    for(int i = 0; i < n; i++) {
+        for(int j = i + 1; j < n; j++) {
+            if(AT[j] < AT[i]) {
+                // Swap all related arrays
+                int temp = P[i];
+                P[i] = P[j];
+                P[j] = temp;
+                
+                temp = AT[i];
+                AT[i] = AT[j];
+                AT[j] = temp;
+                
+                temp = BT[i];
+                BT[i] = BT[j];
+                BT[j] = temp;
+                
+                temp = RT[i];
+                RT[i] = RT[j];
+                RT[j] = temp;
             }
         }
-
-        if (all_completed) {
-            current_time++;
+    }
+    
+    // Set initial time to first process arrival time if not 0
+    if (n > 0 && AT[0] > 0) {
+        t = AT[0];
+    }
+    
+    // Round Robin Scheduling
+    while(completed < n) {
+        int all_waiting = 1;  // Flag to check if all processes are waiting
+        
+        for(int i = 0; i < n; i++) {
+            if(RT[i] > 0 && AT[i] <= t) {  // Process has remaining time and has arrived
+                all_waiting = 0;  // At least one process is not waiting
+                
+                if(RT[i] <= time_quantum) {  // Process can complete in this time quantum
+                    t += RT[i];
+                    CT[i] = t;
+                    RT[i] = 0;
+                    done[i] = 1;
+                    completed++;
+                    
+                    // Calculate TAT and WT
+                    TAT[i] = CT[i] - AT[i];
+                    WT[i] = TAT[i] - BT[i];
+                    
+                    // Update totals
+                    total_tat += TAT[i];
+                    total_wt += WT[i];
+                } else {  // Process needs more time
+                    t += time_quantum;
+                    RT[i] -= time_quantum;
+                }
+                
+                // After executing a process for the time quantum, 
+                // check if new processes have arrived
+                // This is an important step for correct Round Robin implementation
+                // to ensure all arrived processes get a fair chance
+            }
+        }
+        
+        // If all processes are waiting, jump to the next arrival time
+        if(all_waiting) {
+            int next_arrival = -1;
+            for(int i = 0; i < n; i++) {
+                if(!done[i] && (next_arrival == -1 || AT[i] < next_arrival)) {
+                    next_arrival = AT[i];
+                }
+            }
+            
+            if(next_arrival != -1) {
+                t = next_arrival;
+            } else {
+                // Safety check: should never happen if input is valid
+                break;
+            }
         }
     }
-
-    avgtat = tottat / n;
-    avgwt = totwt / n;
-
-    printf("ID\tAT\tBT\tCT\tTAT\tWT\n");
-    for (i = 0; i < n; i++) {
-        printf("%d \t%d \t%d \t%d \t%d \t%d\n", p[i].id, p[i].at, p[i].bt, p[i].ct, p[i].tat, p[i].wt);
+    
+    // Calculate averages
+    avg_tat = total_tat / n;
+    avg_wt = total_wt / n;
+    
+    // Display results
+    printf("\nP\tAT\tBT\tCT\tTAT\tWT\n");
+    printf("-------------------------------------\n");
+    for(int i = 0; i < n; i++) {
+        printf("%d\t%d\t%d\t%d\t%d\t%d\n", P[i], AT[i], BT[i], CT[i], TAT[i], WT[i]);
     }
-
-    printf("Average Turn Around Time : %f\n", avgtat);
-    printf("Average Waiting Time     : %f\n", avgwt);
-
+    printf("-------------------------------------\n");
+    printf("The average Turn Around Time is %.2f\n", avg_tat);
+    printf("The average Waiting Time is %.2f\n", avg_wt);
+    
     return 0;
 }

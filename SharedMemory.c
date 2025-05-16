@@ -12,7 +12,7 @@ int main() {
     printf("Key of shared Memory is %d\n", shmid);
     share_memory = shmat(shmid, NULL, 0);
     printf("Process attached to %p\n",share_memory);
-    printf("Enter string to write to shared memory")
+    printf("Enter string to write to shared memory");
     read(0,buff,100);
     strcpy(share_memory,buff);
     printf("You wrote %s\n",(char*)share_memory);
