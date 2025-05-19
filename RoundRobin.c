@@ -1,132 +1,106 @@
-#include <stdio.h>
+#include<stdio.h>
+struct process{
+int id,at,bt,ct,tat,wt,status,qstatus,rt; //qstatus- status of queue and rt- remaining time.
+};
 
-int main() {
-    int n, time_quantum, t = 0, completed = 0;
-    float total_tat = 0, total_wt = 0, avg_tat, avg_wt;
-    
-    printf("Enter the number of processes: ");
-    scanf("%d", &n);
-    
-    int P[n], AT[n], BT[n], RT[n], CT[n], TAT[n], WT[n], done[n];
-    
-    // Initialize arrays
-    for(int i = 0; i < n; i++) {
-        done[i] = 0;  // Process not completed
-    }
-    
-    printf("Enter the process IDs:\n");
-    for(int i = 0; i < n; i++) {
-        scanf("%d", &P[i]);
-    }
-    
-    printf("Enter the Arrival Times:\n");
-    for(int i = 0; i < n; i++) {
-        scanf("%d", &AT[i]);
-    }
-    
-    printf("Enter the Burst Times:\n");
-    for(int i = 0; i < n; i++) {
-        scanf("%d", &BT[i]);
-        RT[i] = BT[i];  // Initialize remaining time with burst time
-    }
-    
-    printf("Enter the Time Quantum: ");
-    scanf("%d", &time_quantum);
-    
-    // Sort processes by arrival time
-    for(int i = 0; i < n; i++) {
-        for(int j = i + 1; j < n; j++) {
-            if(AT[j] < AT[i]) {
-                // Swap all related arrays
-                int temp = P[i];
-                P[i] = P[j];
-                P[j] = temp;
-                
-                temp = AT[i];
-                AT[i] = AT[j];
-                AT[j] = temp;
-                
-                temp = BT[i];
-                BT[i] = BT[j];
-                BT[j] = temp;
-                
-                temp = RT[i];
-                RT[i] = RT[j];
-                RT[j] = temp;
-            }
+int Q[100],front=-1,rear=-1;
+
+void enqueue(int item)
+   {
+     if(rear==-1)
+      {
+       rear++;
+       front++;
+       Q[rear]=item;
+      }
+     else
+      {
+       rear++;
+       Q[rear]=item;
+       }
+      }
+     
+int dequeue()
+{
+ int item=Q[front];
+ front++;
+return item;  
+}
+
+int main()
+{
+ struct process p[20];
+ int n,i,j,t,current_time=0,completed=0;
+ float avg_tat=0,avg_wt=0,tot_tat=0,tot_wt=0;
+ printf("Enter the number of processes: \n");
+ scanf("%d",&n);
+ 
+ for(i=0;i<n;i++)
+  {
+   printf("Enter the id,at,bt: \n");
+   scanf("%d %d %d",&p[i].id,&p[i].at,&p[i].bt);
+   p[i].status=0;
+   p[i].qstatus=0;
+   p[i].rt=p[i].bt;
+   }
+   
+  printf("Enter the time quantum: \n");
+  scanf("%d",&t);
+   enqueue(0);
+   p[0].qstatus=1;
+   current_time=p[0].at;
+   while(completed!=n)
+   {
+     int i= dequeue();
+     if (p[i].rt>t)
+      {
+       current_time+=t;
+       p[i].rt-= t;
+       }
+     else
+     {
+       current_time+=p[i].rt;
+       p[i].ct=current_time;
+       p[i].status=1;
+       completed++;
+       p[i].tat=p[i].ct-p[i].at;
+       p[i].wt=p[i].tat-p[i].bt-(p[i].bt-p[i].rt);
+       p[i].rt=0;
+     }
+     
+     for(j=i+1;j<n;j++)
+     {
+       if(p[j].at<=current_time&&p[j].status==0&&p[j].qstatus==0)
+       {
+        enqueue(j);
+        p[j].qstatus=1;
+        }
+      }
+      if(p[i].rt!=0)
+        {
+         enqueue(i);
         }
     }
-    
-    // Set initial time to first process arrival time if not 0
-    if (n > 0 && AT[0] > 0) {
-        t = AT[0];
-    }
-    
-    // Round Robin Scheduling
-    while(completed < n) {
-        int all_waiting = 1;  // Flag to check if all processes are waiting
-        
-        for(int i = 0; i < n; i++) {
-            if(RT[i] > 0 && AT[i] <= t) {  // Process has remaining time and has arrived
-                all_waiting = 0;  // At least one process is not waiting
-                
-                if(RT[i] <= time_quantum) {  // Process can complete in this time quantum
-                    t += RT[i];
-                    CT[i] = t;
-                    RT[i] = 0;
-                    done[i] = 1;
-                    completed++;
-                    
-                    // Calculate TAT and WT
-                    TAT[i] = CT[i] - AT[i];
-                    WT[i] = TAT[i] - BT[i];
-                    
-                    // Update totals
-                    total_tat += TAT[i];
-                    total_wt += WT[i];
-                } else {  // Process needs more time
-                    t += time_quantum;
-                    RT[i] -= time_quantum;
-                }
-                
-                // After executing a process for the time quantum, 
-                // check if new processes have arrived
-                // This is an important step for correct Round Robin implementation
-                // to ensure all arrived processes get a fair chance
-            }
-        }
-        
-        // If all processes are waiting, jump to the next arrival time
-        if(all_waiting) {
-            int next_arrival = -1;
-            for(int i = 0; i < n; i++) {
-                if(!done[i] && (next_arrival == -1 || AT[i] < next_arrival)) {
-                    next_arrival = AT[i];
-                }
-            }
-            
-            if(next_arrival != -1) {
-                t = next_arrival;
-            } else {
-                // Safety check: should never happen if input is valid
-                break;
-            }
-        }
-    }
-    
-    // Calculate averages
-    avg_tat = total_tat / n;
-    avg_wt = total_wt / n;
-    
-    // Display results
-    printf("\nP\tAT\tBT\tCT\tTAT\tWT\n");
-    printf("-------------------------------------\n");
-    for(int i = 0; i < n; i++) {
-        printf("%d\t%d\t%d\t%d\t%d\t%d\n", P[i], AT[i], BT[i], CT[i], TAT[i], WT[i]);
-    }
-    printf("-------------------------------------\n");
-    printf("The average Turn Around Time is %.2f\n", avg_tat);
-    printf("The average Waiting Time is %.2f\n", avg_wt);
-    
-    return 0;
+    for(i=0;i<n;i++)
+    {
+      tot_tat+=p[i].tat;
+      tot_wt+=p[i].wt;
+}
+avg_tat=tot_tat/n;
+          avg_wt=tot_wt/n;
+
+printf("Process Details:\n");
+
+printf("id \t at \t bt \t ct \t tat \t wt \n");
+
+
+for(i=0;i<n;i++)
+{
+printf("%d \t %d \t %d \t %d \t %d \t %d \n",p[i].id,p[i].at,p[i].bt,p[i].ct,p[i].tat,p[i].wt);
+
+}
+printf("Average Turnaround time= %0.2f\n",avg_tat);
+
+printf("Average Waiting time= %0.2f",avg_wt);
+
 }
